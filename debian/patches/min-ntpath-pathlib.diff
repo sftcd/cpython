@@ -1,0 +1,21 @@
+Description: ntpath is not in python-minimal, replace module-level imports with
+ local imports in functions that actually require ntpath.
+Forwarded: not-needed
+--- a/Lib/pathlib/__init__.py
++++ b/Lib/pathlib/__init__.py
+@@ -6,7 +6,6 @@
+ """
+ 
+ import io
+-import ntpath
+ import operator
+ import os
+ import posixpath
+@@ -608,6 +607,7 @@
+     On a Windows system, instantiating a PurePath should return this object.
+     However, you can also instantiate it directly on any system.
+     """
++    import ntpath
+     parser = ntpath
+     __slots__ = ()
+ 

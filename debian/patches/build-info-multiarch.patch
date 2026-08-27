@@ -1,0 +1,52 @@
+Rename build-details.json to allow libpython3.14-stdlib to be multiarch
+co-installable. PEP 739 is planned to be updated to allow this.
+
+Bug-Debian: https://bugs.debian.org/1121810
+Bug-Upstream: https://github.com/python/steering-council/issues/341
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -818,11 +818,11 @@
+ 
+ .PHONY: build_all
+ build_all:	check-clean-src check-app-store-compliance $(BUILDPYTHON) platform sharedmods \
+-		gdbhooks Programs/_testembed scripts checksharedmods rundsymutil build-details.json
++		gdbhooks Programs/_testembed scripts checksharedmods rundsymutil build-details.$(ABIFLAGS).$(MULTIARCH).json
+ 
+ .PHONY: build_wasm
+ build_wasm: check-clean-src $(BUILDPYTHON) platform sharedmods \
+-		python-config checksharedmods build-details.json
++		python-config checksharedmods build-details.$(ABIFLAGS).$(MULTIARCH).json
+ 
+ .PHONY: build_emscripten
+ build_emscripten: build_wasm web_example web_example_pyrepl_jspi
+@@ -1033,8 +1033,8 @@
+ 		exit 1 ; \
+ 	fi
+ 
+-build-details.json: pybuilddir.txt
+-	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py `cat pybuilddir.txt`/build-details.json
++build-details.$(ABIFLAGS).$(MULTIARCH).json: pybuilddir.txt
++	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py `cat pybuilddir.txt`/build-details.$(ABIFLAGS).$(MULTIARCH).json
+ 
+ # Build static library
+ $(LIBRARY): $(LIBRARY_OBJS)
+@@ -2460,7 +2460,7 @@
+ # Only the main install gets a build-details.json.
+ .PHONY: install
+ install: @FRAMEWORKINSTALLFIRST@ @INSTALLTARGETS@ @FRAMEWORKINSTALLLAST@
+-	$(INSTALL_DATA) `cat pybuilddir.txt`/build-details.json $(DESTDIR)$(LIBDEST); \
++	$(INSTALL_DATA) `cat pybuilddir.txt`/build-details.$(ABIFLAGS).$(MULTIARCH).json $(DESTDIR)$(LIBDEST); \
+ 	if test "x$(ENSUREPIP)" != "xno"  ; then \
+ 		case $(ENSUREPIP) in \
+ 			upgrade) ensurepip="--upgrade" ;; \
+--- a/Lib/test/test_build_details.py
++++ b/Lib/test/test_build_details.py
+@@ -130,7 +130,7 @@
+                 dirname = os.path.join(projectdir, f.read())
+         else:
+             dirname = sysconfig.get_path('stdlib')
+-        return os.path.join(dirname, 'build-details.json')
++        return os.path.join(dirname, f'build-details.{sys.abiflags}.{sys.implementation._multiarch}.json')
+ 
+     @property
+     def contents(self):

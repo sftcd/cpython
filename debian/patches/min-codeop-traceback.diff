@@ -1,0 +1,24 @@
+Description: Debian: Degrade traceback gracefully without codeop
+ python3.X-minimal includes traceback but not codeop.
+ We don't need suggestions in python3.X-minimal.
+
+Forwarded: not-needed
+
+--- a/Lib/traceback.py
++++ b/Lib/traceback.py
+@@ -10,7 +10,6 @@
+ import textwrap
+ import types
+ import warnings
+-import codeop
+ import keyword
+ import tokenize
+ import io
+@@ -1415,6 +1414,7 @@
+ 
+     def _find_keyword_typos(self):
+         assert self._is_syntax_error
++        import codeop
+         try:
+             import _suggestions
+         except ImportError:

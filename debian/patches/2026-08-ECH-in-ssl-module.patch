@@ -1,0 +1,835 @@
+From e45dc7d6868852fce699aa4d05ebf8b5f86f47ac Mon Sep 17 00:00:00 2001
+From: sftcd <stephen.farrell@cs.tcd.ie>
+Date: Thu, 27 Aug 2026 15:45:22 +0100
+Subject: [PATCH] EncryptedClientHello support in ssl module (2026-08 version)
+
+---
+ Doc/library/ssl.rst     | 122 +++++++++++++++++++++++
+ Lib/ssl.py              |  58 +++++++++--
+ Modules/_ssl.c          | 216 ++++++++++++++++++++++++++++++++++++++++
+ Modules/clinic/_ssl.c.h | 140 ++++++++++++++++++++++++++
+ configure.ac            |  23 +++++
+ pyconfig.h.in           |  13 +++
+ 6 files changed, 563 insertions(+), 9 deletions(-)
+
+diff --git a/Doc/library/ssl.rst b/Doc/library/ssl.rst
+index 66fe6c7aee4..c1f5fde6c23 100644
+--- a/Doc/library/ssl.rst
++++ b/Doc/library/ssl.rst
+@@ -549,6 +549,13 @@ Constants
+ 
+    .. versionadded:: 3.6
+ 
++. class:: ECHStatus
++
++   :class:`enum.IntEnum` collection of Encrypted Client Hello (ECH) statuses
++   returned by :meth:`SSLSocket.get_ech_status`.
++
++   .. versionadded:: TODO XXX
++
+ .. data:: VERIFY_DEFAULT
+ 
+    Possible value for :attr:`SSLContext.verify_flags`. In this mode, certificate
+@@ -1356,6 +1363,23 @@ SSL sockets also have the following additional methods and attributes:
+ 
+    .. versionadded:: 3.3
+ 
++.. method:: SSLSocket.get_ech_retry_config()
++
++   When the status returned by :meth:`SSLSocket.get_ech_status` after completion of the
++   handshake is :data:`ECHStatus.ECH_STATUS_GREASE_ECH`, this method returns the
++   configuration value provided by the server to be used for a new connection using
++   ECH.
++
++   .. versionadded:: TODO XXX
++
++.. method:: SSLSocket.get_ech_status()
++
++   Gets the status of Encrypted Client Hello (ECH) processing. Returns an
++   :class:`ECHStatus` instance.
++
++   .. versionadded:: TODO XXX
++
++
+ .. method:: SSLSocket.selected_alpn_protocol()
+ 
+    Return the protocol that was selected during the TLS handshake.  If
+@@ -1428,6 +1452,15 @@ SSL sockets also have the following additional methods and attributes:
+ 
+    .. versionadded:: 3.2
+ 
++.. attribute:: SSLSocket.outer_server_hostname
++
++   Hostname of the server name used in the outer ClientHello when Encrypted Client
++   Hello (ECH) is used: :class:`str` type, or ``None`` for server-side socket or
++   if the outer server name was not specified in the constructor or the ECH
++   configuration.
++
++   .. versionadded:: TODO XXX
++
+ .. attribute:: SSLSocket.server_side
+ 
+    A boolean which is ``True`` for server-side sockets and ``False`` for
+@@ -1804,6 +1837,24 @@ to speed up repeated connections from the same clients.
+ 
+    .. versionadded:: 3.5
+ 
++.. method:: SSLContext.set_ech_config(ech_config)
++
++   Sets an Encrypted Client Hello (ECH) configuration, which may be discovered from
++   an HTTPS resource record in DNS or from :meth:`SSLSocket.get_ech_retry_config`.
++   Multiple calls to this functions will accumulate the set of values available for
++   a connection.
++
++   If the input value provided contains no suitable value (e.g. if it only contains
++   ECH configuration versions that are not supported), an :class:`SSLError` will be
++   raised.
++
++   The ech_config parameter should be a bytes-like object containing the raw ECH
++   configuration.
++
++   This method will raise :exc:`NotImplementedError` if :data:`HAS_ECH` is ``False``.
++
++   .. versionadded:: TODO XXX
++
+ .. method:: SSLContext.set_npn_protocols(npn_protocols)
+ 
+    Specify which protocols the socket should advertise during the SSL/TLS
+@@ -1823,6 +1874,29 @@ to speed up repeated connections from the same clients.
+ 
+       NPN has been superseded by ALPN
+ 
++.. method:: SSLContext.set_outer_alpn_protocols(protocols)
++
++   Specify which protocols the socket should advertise during the TLS
++   handshake in the outer ClientHello when ECH is used. The *protocols*
++   argument accepts the same values as for
++   :meth:`~SSLContext.set_alpn_protocols`.
++
++   This method will raise :exc:`NotImplementedError` if :data:`HAS_ECH` is
++   ``False``.
++
++   .. versionadded:: TODO XXX
++
++.. method:: SSLContext.set_outer_server_hostname(server_hostname)
++
++   Specify which hostname the socket should advertise during the TLS
++   handshake in the outer ClientHello when ECH is used.
++
++   This method will raise :exc:`NotImplementedError` if :data:`HAS_ECH` is
++   ``False``.
++
++   .. versionadded:: TODO XXX
++
++
+ .. attribute:: SSLContext.sni_callback
+ 
+    Register a callback function that will be called after the TLS Client Hello
+@@ -2719,6 +2793,8 @@ provided.
+    - :meth:`~SSLSocket.verify_client_post_handshake`
+    - :meth:`~SSLSocket.unwrap`
+    - :meth:`~SSLSocket.get_channel_binding`
++   - :meth:`~SSLSocket.get_ech_retry_config`
++   - :meth:`~SSLSocket.get_ech_status`
+    - :meth:`~SSLSocket.version`
+ 
+    When compared to :class:`SSLSocket`, this object lacks the following
+@@ -2943,6 +3019,52 @@ of TLS/SSL. Some new TLS 1.3 features are not yet available.
+ - TLS 1.3 features like early data, deferred TLS client cert request,
+   and rekeying are not supported yet.
+ 
++Encrypted Client Hello
++^^^^^^^^^^^^^^^^^^^^^^
++
++.. versionadded:: TODO XXX
++
++Encrypted Client Hello (ECH) allows for encrypting values that have previously only been
++included unencrypted in the ClientHello records when establishing a TLS connection. To use
++ECH it is necessary to provide configuration values that contain a version, algorithm
++parameters, the public key to use for HPKE encryption and the "public_name" that is by
++default used for the unencrypted (outer) SNI when ECH is attempted. These configuration
++values may be discovered through DNS or through the "retry config" mechanism.
++
++The following example assumes that you have discovered a set of ECH configuration values
++from DNS, or *ech_configs* may be an empty list to rely on the "retry config" mechanism::
++
++    import socket
++    import ssl
++
++
++    def connect_with_tls_ech(hostname: str, ech_configs: List[str],
++                         use_retry_config: bool=True) -> ssl.SSLSocket:
++        context = ssl.create_default_context()
++        for ech_config in ech_configs:
++            context.set_ech_config(ech_config)
++        with socket.create_connection((hostname, 443)) as sock:
++            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
++                if (ssock.get_ech_status == ECHStatus.ECH_STATUS_GREASE_ECH
++                        and use_retry_config):
++                    return connect_with_ech(hostname, [ssock.get_ech_retry_config()],
++                                            False)
++                return ssock
++
++    hostname = "www.python.org"
++    ech_configs = []  # Replace with a call to a function to lookup
++                      # ECH configurations in DNS
++
++    ssock = connect_with_tls_ech(hostname, ech_configs)
++
++The following classes, methods, and attributes will be useful for using ECH:
++
++ - :class:`ECHStatus`
++ - :meth:`SSLContext.set_ech_config`
++ - :meth:`SSLContext.set_outer_alpn_protocols`
++ - :meth:`SSLContext.set_outer_server_hostname`
++ - :meth:`SSLSocket.get_ech_status`
++ - :meth:`SSLSocket.get_ech_retry_config`
+ 
+ .. seealso::
+ 
+diff --git a/Lib/ssl.py b/Lib/ssl.py
+index dc957121728..3a3d9a90b9f 100644
+--- a/Lib/ssl.py
++++ b/Lib/ssl.py
+@@ -149,6 +149,11 @@
+     lambda name: name.startswith('CERT_'),
+     source=_ssl)
+ 
++_IntEnum._convert_(
++    'ECHStatus', __name__,
++    lambda name: name.startswith('ECH_STATUS_'),
++    source=_ssl)
++
+ PROTOCOL_SSLv23 = _SSLMethod.PROTOCOL_SSLv23 = _SSLMethod.PROTOCOL_TLS
+ _PROTOCOL_NAMES = frozendict({
+     value: name for name, value in _SSLMethod.__members__.items()})
+@@ -502,16 +507,13 @@ def shim_cb(sslobj, servername, sslctx):
+             self.sni_callback = shim_cb
+ 
+     def set_alpn_protocols(self, alpn_protocols):
+-        protos = bytearray()
+-        for protocol in alpn_protocols:
+-            b = bytes(protocol, 'ascii')
+-            if len(b) == 0 or len(b) > 255:
+-                raise SSLError('ALPN protocols must be 1 to 255 in length')
+-            protos.append(len(b))
+-            protos.extend(b)
+-
++        protos = encode_alpn_protocol_list(alpn_protocols)
+         self._set_alpn_protocols(protos)
+ 
++    def set_outer_alpn_protocols(self, alpn_protocols):
++        protos = encode_alpn_protocol_list(alpn_protocols)
++        self._set_outer_alpn_protocols(protos)
++
+     def _load_windows_store_certs(self, storename, purpose):
+         try:
+             for cert, encoding, trust in enum_certificates(storename):
+@@ -829,6 +831,14 @@ def context(self):
+     def context(self, ctx):
+         self._sslobj.context = ctx
+ 
++    @property
++    def outer_server_hostname(self) -> str:
++        """The server name used in the outer ClientHello."""
++        if self._sslobj:
++            return self._sslobj.get_ech_status()[2]
++        else:
++            raise ValueError("No SSL wrapper around " + str(self))
++
+     @property
+     def session(self):
+         """The SSLSession for client socket."""
+@@ -978,6 +988,9 @@ def version(self):
+     def verify_client_post_handshake(self):
+         return self._sslobj.verify_client_post_handshake()
+ 
++    def get_ech_status(self):
++        return ECHStatus(self._sslobj.get_ech_status()[0])
++
+ 
+ def _sslcopydoc(func):
+     """Copy docstring from SSLObject to SSLSocket"""
+@@ -1004,13 +1017,16 @@ def __init__(self, *args, **kwargs):
+     @classmethod
+     def _create(cls, sock, server_side=False, do_handshake_on_connect=True,
+                 suppress_ragged_eofs=True, server_hostname=None,
+-                context=None, session=None):
++                context=None, session=None, outer_server_hostname=None):
+         if sock.getsockopt(SOL_SOCKET, SO_TYPE) != SOCK_STREAM:
+             raise NotImplementedError("only stream sockets are supported")
+         if server_side:
+             if server_hostname:
+                 raise ValueError("server_hostname can only be specified "
+                                  "in client mode")
++            if outer_server_hostname:
++                raise ValueError("outer_server_hostname can only be specified "
++                                 "in client mode")
+             if session is not None:
+                 raise ValueError("session can only be specified in "
+                                  "client mode")
+@@ -1111,6 +1127,14 @@ def context(self, ctx):
+         self._context = ctx
+         self._sslobj.context = ctx
+ 
++    @property
++    def outer_server_hostname(self) -> str:
++        """The server name used in the outer ClientHello."""
++        if self._sslobj:
++            return self._sslobj.get_ech_status()[2]
++        else:
++            raise ValueError("No SSL wrapper around " + str(self))
++
+     @property
+     @_sslcopydoc
+     def session(self):
+@@ -1412,6 +1436,12 @@ def verify_client_post_handshake(self):
+         else:
+             raise ValueError("No SSL wrapper around " + str(self))
+ 
++    def get_ech_status(self):
++        if self._sslobj:
++            return ECHStatus(self._sslobj.get_ech_status()[0])
++        else:
++            raise ValueError("No SSL wrapper around " + str(self))
++
+     def _real_close(self):
+         self._sslobj = None
+         super()._real_close()
+@@ -1578,3 +1608,13 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_TLS_CLIENT,
+ 
+ def get_protocol_name(protocol_code):
+     return _PROTOCOL_NAMES.get(protocol_code, '<unknown>')
++
++def encode_alpn_protocol_list(alpn_protocols):
++    protos = bytearray()
++    for protocol in alpn_protocols:
++        b = bytes(protocol, 'ascii')
++        if len(b) == 0 or len(b) > 255:
++            raise SSLError('ALPN protocols must be 1 to 255 in length')
++        protos.append(len(b))
++        protos.extend(b)
++    return protos
+diff --git a/Modules/_ssl.c b/Modules/_ssl.c
+index aadc0154054..dc5ff9e704c 100644
+--- a/Modules/_ssl.c
++++ b/Modules/_ssl.c
+@@ -75,6 +75,10 @@
+ #include "openssl/bio.h"
+ #include "openssl/dh.h"
+ 
++#if __has_include("openssl/ech.h")
++#include "openssl/ech.h"
++#endif
++
+ #ifndef OPENSSL_THREADS
+ #  error "OPENSSL_THREADS is not defined, Python requires thread-safe OpenSSL"
+ #endif
+@@ -2115,6 +2119,111 @@ cipher_to_dict(const SSL_CIPHER *cipher)
+        );
+ }
+ 
++/*[clinic input]
++_ssl._SSLSocket.get_ech_status
++[clinic start generated code]*/
++
++static PyObject *
++_ssl__SSLSocket_get_ech_status_impl(PySSLSocket *self)
++/*[clinic end generated code: output=263bf7fc7888e2d6 input=4f68a05d59f39372]*/
++{
++#ifdef OPENSSL_ECH
++    char *inner_sni = NULL, *outer_sni = NULL;
++
++    if (self->ssl == NULL) {
++        Py_RETURN_NONE;
++    }
++
++    int status = SSL_ech_get1_status(self->ssl, &inner_sni, &outer_sni);
++	PyObject *retval = PyTuple_New(3);
++    PyTuple_SetItem(retval, 0, PyLong_FromLong(status));
++
++    if (inner_sni != NULL) {
++        PyTuple_SetItem(retval, 1, PyUnicode_FromString(inner_sni));
++        OPENSSL_free(inner_sni);
++    } else {
++        PyTuple_SetItem(retval, 1, Py_None);
++        Py_INCREF(Py_None);
++    }
++
++    if (outer_sni != NULL) {
++        PyTuple_SetItem(retval, 2, PyUnicode_FromString(outer_sni));
++        OPENSSL_free(outer_sni);
++    } else {
++        PyTuple_SetItem(retval, 2, Py_None);
++        Py_INCREF(Py_None);
++    }
++
++    return retval;
++#else
++    PyErr_SetString(PyExc_NotImplementedError, "OpenSSL does not have ECH support");
++    return NULL;
++#endif
++}
++
++/*[clinic input]
++_ssl._SSLSocket.get_ech_retry_config
++[clinic start generated code]*/
++
++static PyObject *
++_ssl__SSLSocket_get_ech_retry_config_impl(PySSLSocket *self)
++/*[clinic end generated code: output=967da2032df9a37a input=b9b3cee90aedc05d]*/
++{
++#ifdef OPENSSL_ECH
++    unsigned char *ec;
++    size_t eclen;
++
++    if (self->ssl == NULL) {
++        Py_RETURN_NONE;
++    }
++
++    SSL_ech_get1_retry_config(self->ssl, &ec, &eclen);
++
++    return PyBytes_FromStringAndSize((char *)ec, eclen);
++#else
++    PyErr_SetString(PyExc_NotImplementedError, "OpenSSL does not have ECH support");
++    return NULL;
++#endif
++}
++
++/*[clinic input]
++_ssl._SSLSocket.set_outer_server_name
++
++    outer_server_name: str
++    /
++[clinic start generated code]*/
++
++static PyObject *
++_ssl__SSLSocket_set_outer_server_name_impl(PySSLSocket *self,
++                                           const char *outer_server_name)
++/*[clinic end generated code: output=24e7c6b7b3c2ce84 input=5f68803fbe85a69c]*/
++{
++#ifdef OPENSSL_ECH
++    if (self->ssl == NULL) {
++        Py_RETURN_NONE;
++    }
++
++    int result;
++
++    if (outer_server_name != NULL) {
++        result = SSL_ech_set1_outer_server_name(self->ssl, outer_server_name, 0);
++    } else {
++        /* Do not send an outer SNI */
++        result = SSL_ech_set1_outer_server_name(self->ssl, NULL, 1);
++    }
++
++    if (result != 1) {
++        _setSSLError(get_state_sock(self), NULL, 0, __FILE__, __LINE__);
++        return NULL;
++    }
++
++    Py_RETURN_NONE;
++#else
++    PyErr_SetString(PyExc_NotImplementedError, "OpenSSL does not have ECH support");
++    return NULL;
++#endif
++}
++
+ /*[clinic input]
+ @critical_section
+ _ssl._SSLSocket.shared_ciphers
+@@ -3340,6 +3449,9 @@ static PyMethodDef PySSLMethods[] = {
+     _SSL__SSLSOCKET_COMPRESSION_METHODDEF
+     _SSL__SSLSOCKET_SHUTDOWN_METHODDEF
+     _SSL__SSLSOCKET_VERIFY_CLIENT_POST_HANDSHAKE_METHODDEF
++    _SSL__SSLSOCKET_GET_ECH_STATUS_METHODDEF
++    _SSL__SSLSOCKET_SET_OUTER_SERVER_NAME_METHODDEF
++    _SSL__SSLSOCKET_GET_ECH_RETRY_CONFIG_METHODDEF
+     _SSL__SSLSOCKET_GET_UNVERIFIED_CHAIN_METHODDEF
+     _SSL__SSLSOCKET_GET_VERIFIED_CHAIN_METHODDEF
+     {NULL, NULL}
+@@ -3942,6 +4054,43 @@ _ssl__SSLContext__set_alpn_protocols_impl(PySSLContext *self,
+     Py_RETURN_NONE;
+ }
+ 
++/*[clinic input]
++@critical_section
++_ssl._SSLContext._set_outer_alpn_protocols
++    protos: Py_buffer
++    /
++[clinic start generated code]*/
++
++static PyObject *
++_ssl__SSLContext__set_outer_alpn_protocols_impl(PySSLContext *self,
++                                                Py_buffer *protos)
++/*[clinic end generated code: output=823aea95e8dea835 input=b6ddf7d0791afd0e]*/
++{
++#ifdef OPENSSL_ECH
++    if ((size_t)protos->len > UINT_MAX) {
++        PyErr_Format(PyExc_OverflowError,
++            "protocols longer than %u bytes", UINT_MAX);
++        return NULL;
++    }
++
++    PyMem_Free(self->alpn_protocols);
++    self->alpn_protocols = PyMem_Malloc(protos->len);
++    if (!self->alpn_protocols) {
++        return PyErr_NoMemory();
++    }
++    memcpy(self->alpn_protocols, protos->buf, protos->len);
++    self->alpn_protocols_len = (unsigned int)protos->len;
++    if (SSL_CTX_ech_set1_outer_alpn_protos(self->ctx, self->alpn_protocols, self->alpn_protocols_len)) {
++        return PyErr_NoMemory();
++    }
++
++    Py_RETURN_NONE;
++#else
++    PyErr_SetString(PyExc_NotImplementedError, "OpenSSL does not have ECH support");
++    return NULL;
++#endif
++}
++
+ /*[clinic input]
+ @critical_section
+ @getter
+@@ -5085,6 +5234,45 @@ _ssl__SSLContext_set_default_verify_paths_impl(PySSLContext *self)
+     Py_RETURN_NONE;
+ }
+ 
++/*[clinic input]
++_ssl._SSLContext.set_ech_config
++
++    ech_config: Py_buffer
++    /
++
++Set the ECH configuration on the SSL context.
++
++The echconfig parameter should be a bytes-like object containing the raw ECH configuration.
++[clinic start generated code]*/
++
++static PyObject *
++_ssl__SSLContext_set_ech_config_impl(PySSLContext *self,
++                                     Py_buffer *ech_config)
++/*[clinic end generated code: output=cea53188b338cf80 input=09f9a38c5aaef091]*/
++{
++#ifdef OPENSSL_ECH
++    OSSL_ECHSTORE *es = NULL;
++    BIO *es_in = NULL;
++
++    if ((es_in = BIO_new_mem_buf(ech_config->buf, ech_config->len)) == NULL
++        || (es = OSSL_ECHSTORE_new(NULL, NULL)) == NULL
++        || OSSL_ECHSTORE_read_echconfiglist(es, es_in) != 1
++        || SSL_CTX_set1_echstore(self->ctx, es) != 1) {
++        _setSSLError(get_state_ctx(self), NULL, 0, __FILE__, __LINE__);
++        OSSL_ECHSTORE_free(es);
++        BIO_free_all(es_in);
++        return NULL;
++    }
++    OSSL_ECHSTORE_free(es);
++    BIO_free_all(es_in);
++    PyBuffer_Release(ech_config);
++    Py_RETURN_NONE;
++#else
++    PyErr_SetString(PyExc_NotImplementedError, "OpenSSL does not have ECH support");
++    return NULL;
++#endif
++}
++
+ /*[clinic input]
+ @critical_section
+ _ssl._SSLContext.set_ecdh_curve
+@@ -5751,6 +5939,8 @@ static struct PyMethodDef context_methods[] = {
+     _SSL__SSLCONTEXT_SESSION_STATS_METHODDEF
+     _SSL__SSLCONTEXT_SET_DEFAULT_VERIFY_PATHS_METHODDEF
+     _SSL__SSLCONTEXT_SET_ECDH_CURVE_METHODDEF
++    _SSL__SSLCONTEXT_SET_ECH_CONFIG_METHODDEF
++    _SSL__SSLCONTEXT__SET_OUTER_ALPN_PROTOCOLS_METHODDEF
+     _SSL__SSLCONTEXT_CERT_STORE_STATS_METHODDEF
+     _SSL__SSLCONTEXT_GET_CA_CERTS_METHODDEF
+     _SSL__SSLCONTEXT_GET_CIPHERS_METHODDEF
+@@ -6949,6 +7139,20 @@ sslmodule_init_constants(PyObject *m)
+     ADD_INT_CONST("VERIFY_X509_PARTIAL_CHAIN", X509_V_FLAG_PARTIAL_CHAIN);
+ #endif
+ 
++#ifdef OPENSSL_ECH
++    ADD_INT_CONST("ECH_STATUS_BACKEND", SSL_ECH_STATUS_BACKEND);
++    ADD_INT_CONST("ECH_STATUS_GREASE_ECH", SSL_ECH_STATUS_GREASE_ECH);
++    ADD_INT_CONST("ECH_STATUS_GREASE", SSL_ECH_STATUS_GREASE);
++    ADD_INT_CONST("ECH_STATUS_SUCCESS", SSL_ECH_STATUS_SUCCESS);
++    ADD_INT_CONST("ECH_STATUS_FAILED", SSL_ECH_STATUS_FAILED);
++    ADD_INT_CONST("ECH_STATUS_BAD_CALL", SSL_ECH_STATUS_BAD_CALL);
++    ADD_INT_CONST("ECH_STATUS_NOT_TRIED", SSL_ECH_STATUS_NOT_TRIED);
++    ADD_INT_CONST("ECH_STATUS_BAD_NAME", SSL_ECH_STATUS_BAD_NAME);
++    ADD_INT_CONST("ECH_STATUS_NOT_CONFIGURED", SSL_ECH_STATUS_NOT_CONFIGURED);
++    ADD_INT_CONST("ECH_STATUS_FAILED_ECH", SSL_ECH_STATUS_FAILED_ECH);
++    ADD_INT_CONST("ECH_STATUS_FAILED_ECH_BAD_NAME", SSL_ECH_STATUS_FAILED_ECH_BAD_NAME);
++#endif 
++
+     /* Alert Descriptions from ssl.h */
+     /* note RESERVED constants no longer intended for use have been removed */
+     /* http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-6 */
+@@ -7038,6 +7242,12 @@ sslmodule_init_constants(PyObject *m)
+     ADD_OPTION("OP_NO_TICKET", SSL_OP_NO_TICKET);
+     ADD_OPTION("OP_LEGACY_SERVER_CONNECT",
+                             SSL_OP_LEGACY_SERVER_CONNECT);
++#ifdef OPENSSL_ECH
++    ADD_OPTION("OP_ECH_GREASE", SSL_OP_ECH_GREASE);
++    ADD_OPTION("OP_ECH_TRIALDECRYPT", SSL_OP_ECH_TRIALDECRYPT);
++    ADD_OPTION("OP_ECH_IGNORE_CID", SSL_OP_ECH_IGNORE_CID);
++    ADD_OPTION("OP_ECH_GREASE_RETRY_CONFIG", SSL_OP_ECH_GREASE_RETRY_CONFIG);
++#endif
+ #ifdef SSL_OP_SINGLE_ECDH_USE
+     ADD_OPTION("OP_SINGLE_ECDH_USE", SSL_OP_SINGLE_ECDH_USE);
+ #endif
+@@ -7165,6 +7375,12 @@ sslmodule_init_constants(PyObject *m)
+     addbool(m, "HAS_PHA", 0);
+ #endif
+ 
++#ifdef OPENSSL_NO_ECH
++    addbool(m, "HAS_ECH", 0);
++#else
++    addbool(m, "HAS_ECH", 1);
++#endif
++
+ #undef addbool
+ #undef ADD_INT_CONST
+ 
+diff --git a/Modules/clinic/_ssl.c.h b/Modules/clinic/_ssl.c.h
+index d60e437b568..a12e6758c2f 100644
+--- a/Modules/clinic/_ssl.c.h
++++ b/Modules/clinic/_ssl.c.h
+@@ -155,6 +155,77 @@ _ssl__SSLSocket_get_unverified_chain(PyObject *self, PyObject *Py_UNUSED(ignored
+     return return_value;
+ }
+ 
++PyDoc_STRVAR(_ssl__SSLSocket_get_ech_status__doc__,
++"get_ech_status($self, /)\n"
++"--\n"
++"\n");
++
++#define _SSL__SSLSOCKET_GET_ECH_STATUS_METHODDEF    \
++    {"get_ech_status", (PyCFunction)_ssl__SSLSocket_get_ech_status, METH_NOARGS, _ssl__SSLSocket_get_ech_status__doc__},
++
++static PyObject *
++_ssl__SSLSocket_get_ech_status_impl(PySSLSocket *self);
++
++static PyObject *
++_ssl__SSLSocket_get_ech_status(PySSLSocket *self, PyObject *Py_UNUSED(ignored))
++{
++    return _ssl__SSLSocket_get_ech_status_impl(self);
++}
++
++PyDoc_STRVAR(_ssl__SSLSocket_get_ech_retry_config__doc__,
++"get_ech_retry_config($self, /)\n"
++"--\n"
++"\n");
++
++#define _SSL__SSLSOCKET_GET_ECH_RETRY_CONFIG_METHODDEF    \
++    {"get_ech_retry_config", (PyCFunction)_ssl__SSLSocket_get_ech_retry_config, METH_NOARGS, _ssl__SSLSocket_get_ech_retry_config__doc__},
++
++static PyObject *
++_ssl__SSLSocket_get_ech_retry_config_impl(PySSLSocket *self);
++
++static PyObject *
++_ssl__SSLSocket_get_ech_retry_config(PySSLSocket *self, PyObject *Py_UNUSED(ignored))
++{
++    return _ssl__SSLSocket_get_ech_retry_config_impl(self);
++}
++
++PyDoc_STRVAR(_ssl__SSLSocket_set_outer_server_name__doc__,
++"set_outer_server_name($self, outer_server_name, /)\n"
++"--\n"
++"\n");
++
++#define _SSL__SSLSOCKET_SET_OUTER_SERVER_NAME_METHODDEF    \
++    {"set_outer_server_name", (PyCFunction)_ssl__SSLSocket_set_outer_server_name, METH_O, _ssl__SSLSocket_set_outer_server_name__doc__},
++
++static PyObject *
++_ssl__SSLSocket_set_outer_server_name_impl(PySSLSocket *self,
++                                           const char *outer_server_name);
++
++static PyObject *
++_ssl__SSLSocket_set_outer_server_name(PySSLSocket *self, PyObject *arg)
++{
++    PyObject *return_value = NULL;
++    const char *outer_server_name;
++
++    if (!PyUnicode_Check(arg)) {
++        _PyArg_BadArgument("set_outer_server_name", "argument", "str", arg);
++        goto exit;
++    }
++    Py_ssize_t outer_server_name_length;
++    outer_server_name = PyUnicode_AsUTF8AndSize(arg, &outer_server_name_length);
++    if (outer_server_name == NULL) {
++        goto exit;
++    }
++    if (strlen(outer_server_name) != (size_t)outer_server_name_length) {
++        PyErr_SetString(PyExc_ValueError, "embedded null character");
++        goto exit;
++    }
++    return_value = _ssl__SSLSocket_set_outer_server_name_impl(self, outer_server_name);
++
++exit:
++    return return_value;
++}
++
+ PyDoc_STRVAR(_ssl__SSLSocket_shared_ciphers__doc__,
+ "shared_ciphers($self, /)\n"
+ "--\n"
+@@ -1326,6 +1397,40 @@ exit:
+     return return_value;
+ }
+ 
++PyDoc_STRVAR(_ssl__SSLContext__set_outer_alpn_protocols__doc__,
++"_set_outer_alpn_protocols($self, protos, /)\n"
++"--\n"
++"\n");
++
++#define _SSL__SSLCONTEXT__SET_OUTER_ALPN_PROTOCOLS_METHODDEF    \
++    {"_set_outer_alpn_protocols", (PyCFunction)_ssl__SSLContext__set_outer_alpn_protocols, METH_O, _ssl__SSLContext__set_outer_alpn_protocols__doc__},
++
++static PyObject *
++_ssl__SSLContext__set_outer_alpn_protocols_impl(PySSLContext *self,
++                                                Py_buffer *protos);
++
++static PyObject *
++_ssl__SSLContext__set_outer_alpn_protocols(PySSLContext *self, PyObject *arg)
++{
++    PyObject *return_value = NULL;
++    Py_buffer protos = {NULL, NULL};
++
++    if (PyObject_GetBuffer(arg, &protos, PyBUF_SIMPLE) != 0) {
++        goto exit;
++    }
++    Py_BEGIN_CRITICAL_SECTION(self);
++    return_value = _ssl__SSLContext__set_outer_alpn_protocols_impl(self, &protos);
++    Py_END_CRITICAL_SECTION();
++
++exit:
++    /* Cleanup for protos */
++    if (protos.obj) {
++       PyBuffer_Release(&protos);
++    }
++
++    return return_value;
++}
++
+ #if !defined(_ssl__SSLContext_verify_mode_DOCSTR)
+ #  define _ssl__SSLContext_verify_mode_DOCSTR NULL
+ #endif
+@@ -2261,6 +2366,41 @@ _ssl__SSLContext_set_default_verify_paths(PyObject *self, PyObject *Py_UNUSED(ig
+     return return_value;
+ }
+ 
++PyDoc_STRVAR(_ssl__SSLContext_set_ech_config__doc__,
++"set_ech_config($self, ech_config, /)\n"
++"--\n"
++"\n"
++"Set the ECH configuration on the SSL context.\n"
++"\n"
++"The echconfig parameter should be a bytes-like object containing the raw ECH configuration.");
++
++#define _SSL__SSLCONTEXT_SET_ECH_CONFIG_METHODDEF    \
++    {"set_ech_config", (PyCFunction)_ssl__SSLContext_set_ech_config, METH_O, _ssl__SSLContext_set_ech_config__doc__},
++
++static PyObject *
++_ssl__SSLContext_set_ech_config_impl(PySSLContext *self,
++                                     Py_buffer *ech_config);
++
++static PyObject *
++_ssl__SSLContext_set_ech_config(PySSLContext *self, PyObject *arg)
++{
++    PyObject *return_value = NULL;
++    Py_buffer ech_config = {NULL, NULL};
++
++    if (PyObject_GetBuffer(arg, &ech_config, PyBUF_SIMPLE) != 0) {
++        goto exit;
++    }
++    return_value = _ssl__SSLContext_set_ech_config_impl(self, &ech_config);
++
++exit:
++    /* Cleanup for ech_config */
++    if (ech_config.obj) {
++       PyBuffer_Release(&ech_config);
++    }
++
++    return return_value;
++}
++
+ PyDoc_STRVAR(_ssl__SSLContext_set_ecdh_curve__doc__,
+ "set_ecdh_curve($self, name, /)\n"
+ "--\n"
+diff --git a/configure.ac b/configure.ac
+index 476f13c82bb..e5c8e85328c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -8071,6 +8071,29 @@ WITH_SAVE_ENV([
+   ])
+ ])
+ 
++WITH_SAVE_ENV([
++  LIBS="$LIBS $OPENSSL_LIBS"
++  CFLAGS="$CFLAGS $OPENSSL_INCLUDES"
++  LDFLAGS="$LDFLAGS $OPENSSL_LDFLAGS $OPENSSL_LDFLAGS_RPATH"
++
++AC_CHECK_HEADERS([openssl/ech.h], [have_openssl_ech_h=yes], [have_openssl_ech_h=no])
++if test "$have_openssl_ech_h" = "yes"; then
++    AC_MSG_CHECKING([for OpenSSL ECH support])
++    AC_CHECK_DECLS([SSL_ECH_STATUS_GREASE_ECH],
++                   [AC_DEFINE([OPENSSL_ECH], [1],
++                              [Define if OpenSSL has ECH support])],
++                   [AC_DEFINE([OPENSSL_NO_ECH], [1],
++                              [Define if OpenSSL does not have ECH support])],
++                   [
++             #include <openssl/ech.h>
++             ])
++    AC_MSG_RESULT([$ac_cv_have_decl_SSL_ECH_STATUS_GREASE_ECH])
++else
++    AC_DEFINE([OPENSSL_NO_ECH], [1],
++              [Define if OpenSSL does not have ECH support])
++fi
++])
++
+ # ssl module default cipher suite string
+ AH_TEMPLATE([PY_SSL_DEFAULT_CIPHERS],
+   [Default cipher suites list for ssl module.
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 64b5c52790b..ecd17958fdd 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -356,6 +356,10 @@
+    don't. */
+ #undef HAVE_DECL_RTLD_NOW
+ 
++/* Define to 1 if you have the declaration of 'SSL_ECH_STATUS_GREASE_ECH', and
++   to 0 if you don't. */
++#undef HAVE_DECL_SSL_ECH_STATUS_GREASE_ECH
++
+ /* Define to 1 if you have the declaration of 'tzname', and to 0 if you don't.
+    */
+ #undef HAVE_DECL_TZNAME
+@@ -1037,6 +1041,9 @@
+ /* Define to 1 if you have the 'openpty' function. */
+ #undef HAVE_OPENPTY
+ 
++/* Define to 1 if you have the <openssl/ech.h> header file. */
++#undef HAVE_OPENSSL_ECH_H
++
+ /* Define if you have the 'panel' library */
+ #undef HAVE_PANEL
+ 
+@@ -1837,6 +1844,12 @@
+ /* Define if mvwdelch in curses.h is an expression. */
+ #undef MVWDELCH_IS_EXPRESSION
+ 
++/* Define if OpenSSL has ECH support */
++#undef OPENSSL_ECH
++
++/* Define if OpenSSL does not have ECH support */
++#undef OPENSSL_NO_ECH
++
+ /* Define to the address where bug reports for this package should be sent. */
+ #undef PACKAGE_BUGREPORT
+ 
+-- 
+2.53.0
+

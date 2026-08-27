@@ -1,0 +1,21 @@
+Description: Debian: Degrade argparse gracefully without difflib
+ python3.X-minimal doesn't include difflib, so don't offer suggestions.
+
+Forwarded: not-needed
+--- a/Lib/argparse.py
++++ b/Lib/argparse.py
+@@ -2824,8 +2824,12 @@
+ 
+             if self.suggest_on_error and isinstance(value, str):
+                 if all(isinstance(choice, str) for choice in action.choices):
+-                    import difflib
+-                    suggestions = difflib.get_close_matches(value, action.choices, 1)
++                    try:
++                        import difflib
++                    except ImportError:
++                        suggestions = None
++                    else:
++                        suggestions = difflib.get_close_matches(value, action.choices, 1)
+                     if suggestions:
+                         args['closest'] = suggestions[0]
+                         msg = _('invalid choice: %(value)r, maybe you meant %(closest)r? '

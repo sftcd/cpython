@@ -1,0 +1,15 @@
+Description: packaging (<< 24.1) doesn't recognise the +.
+ We usually have git-updates that have the +
+
+Bug-upstream: https://github.com/python/cpython/issues/99968
+--- a/Include/patchlevel.h
++++ b/Include/patchlevel.h
+@@ -24,7 +24,7 @@
+ #define PY_RELEASE_SERIAL       0
+ 
+ /* Version as a string */
+-#define PY_VERSION              "3.14.3+"
++#define PY_VERSION              "3.14.3"
+ /*--end constants--*/
+ 
+ 

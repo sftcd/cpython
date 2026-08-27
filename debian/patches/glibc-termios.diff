@@ -1,0 +1,30 @@
+Bug-Upstream: https://github.com/python/cpython/issues/142379
+
+--- a/Modules/termios.c
++++ b/Modules/termios.c
+@@ -1122,9 +1122,6 @@
+ #ifdef TCFLSH
+     {"TCFLSH", TCFLSH},
+ #endif
+-#ifdef TCGETA
+-    {"TCGETA", TCGETA},
+-#endif
+ #ifdef TCGETS
+     {"TCGETS", TCGETS},
+ #endif
+@@ -1134,15 +1131,6 @@
+ #ifdef TCSBRKP
+     {"TCSBRKP", TCSBRKP},
+ #endif
+-#ifdef TCSETA
+-    {"TCSETA", TCSETA},
+-#endif
+-#ifdef TCSETAF
+-    {"TCSETAF", TCSETAF},
+-#endif
+-#ifdef TCSETAW
+-    {"TCSETAW", TCSETAW},
+-#endif
+ #ifdef TCSETS
+     {"TCSETS", TCSETS},
+ #endif

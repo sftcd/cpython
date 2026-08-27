@@ -1,0 +1,31 @@
+From cbaa0eeb1584ffaf8cfc21e740fe9cfc15594910 Mon Sep 17 00:00:00 2001
+From: Stefano Rivera <stefano@rivera.za.net>
+Date: Sat, 9 May 2026 20:11:06 -0400
+Subject: [PATCH] Increase the size of the test document in
+ test_deeply_nested_content_model
+
+On Debian's `i386` builds of 3.15 with system Expat, the parser was
+happily parsing the entire document without raising RecursionError or
+crashing.
+
+The increased limit is borrowed from the (later reverted)
+255026d9eea81719214c8e807d23df55b5f39b54. Presumably that change ran
+into a similar issue.
+---
+ Lib/test/test_pyexpat.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Forwarded: https://github.com/python/cpython/pull/149627
+Bug-Debian: https://bugs.debian.org/1135052
+
+--- a/Lib/test/test_pyexpat.py
++++ b/Lib/test/test_pyexpat.py
+@@ -861,7 +861,7 @@
+     def test_deeply_nested_content_model(self):
+         # This should raise a RecursionError and not crash.
+         # See https://github.com/python/cpython/issues/145986.
+-        N = 500_000
++        N = 800_000
+         data = (
+             b'<!DOCTYPE root [\n<!ELEMENT root '
+             + b'(a, ' * N + b'a' + b')' * N

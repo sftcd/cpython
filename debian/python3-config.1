@@ -1,0 +1,104 @@
+.TH PYTHON\-CONFIG 1 "November 27, 2011"
+.SH NAME
+python\-config \- output build options for python C/C++ extensions or embedding
+.SH SYNOPSIS
+.B python\-config
+[
+.B \-\-prefix
+]
+[
+.B \-\-exec\-prefix
+]
+[
+.B \-\-includes
+]
+[
+.B \-\-libs
+]
+[
+.B \-\-cflags
+]
+[
+.B \-\-ldflags
+]
+[
+.B \-\-extension\-suffix
+]
+[
+.B \-\-abiflags
+]
+[
+.B \-\-help
+]
+.SH DESCRIPTION
+.B python\-config
+helps compiling and linking programs, which embed the Python interpreter, or
+extension modules that can be loaded dynamically (at run time) into
+the interpreter.
+.SH OPTIONS
+.TP
+.B \-\-abiflags
+print the the ABI flags as specified by PEP 3149.
+.TP
+.B \-\-cflags
+print the C compiler flags.
+.TP
+.B \-\-ldflags
+print the flags that should be passed to the linker.
+.TP
+.B \-\-includes
+similar to \fI\-\-cflags\fP but only with \-I options
+(path to python header files).
+.TP
+.B \-\-libs
+similar to \fI\-\-ldflags\fP but only with \-l options
+(used libraries).
+.TP
+.B \-\-prefix
+prints the prefix (base directory) under which python can be found.
+.TP
+.B \-\-exec\-prefix
+print the prefix used for executable program directories
+(such as bin, sbin, etc).
+.TP
+.B \-\-extension\-suffix
+print the extension suffix used for binary extensions.
+.TP
+.B \-\-help
+print the usage message.
+.
+.SH EXAMPLES
+To build the singe\-file c program \fIprog\fP against the python library, use
+.PP
+.RS
+gcc $(python\-config \-\-cflags \-\-ldflags) progr.cpp \-o progr.cpp
+.RE
+.PP
+The same in a makefile:
+.PP
+.RS
+CFLAGS+=$(shell python\-config \-\-cflags)
+.RE
+.RS
+LDFLAGS+=$(shell python\-config \-\-ldflags)
+.RE
+.RS
+all: progr
+.RE
+
+To build a dynamically loadable python module, use
+.PP
+.RS
+gcc $(python\-config \-\-cflags \-\-ldflags) \-shared \-fPIC progr.cpp \-o progr.so
+.RE
+
+.SH "SEE ALSO"
+python (1)
+.br
+http://docs.python.org/extending/extending.html
+.br
+/usr/share/doc/python/faq/extending.html
+
+.SH AUTHORS
+This manual page was written by Johann Felix Soden <johfel@gmx.de>
+for the Debian project (and may be used by others).

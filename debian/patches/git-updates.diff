@@ -1,0 +1,6 @@
+Description: Updates from the 3.14 branch (until 2026-03-27).
+ We pick the latest updates from the maintainance branch, and carry them in a
+ patch, rather than creating and uploading uploading a new .orig tarball.
+
+# git diff --no-renames 323c59a5e348347be2ce2b7ea55fcb30bf68b2d3 cba54979dfe33a579394e02fdaa55326663bd274 | filterdiff -x ?/.hgignore -x ?/.hgeol -x ?/.hgtags -x ?/.hgtouch -x ?/.gitignore -x ?/.gitattributes -x '?/.github/*' -x '?/.git*' -x ?/.codecov.yml -x ?/.travis.yml -x ?/configure --remove-timestamps
+

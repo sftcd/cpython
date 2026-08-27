@@ -1,0 +1,5 @@
+{
+  "_tkinter": "Please install the python3-tk package for tkinter support.",
+  "_gdbm": "Please install the python3-gdbm package for GDBM support.",
+  "ensurepip": "Please install the python3-venv package to create virtual environments (with pip)."
+}

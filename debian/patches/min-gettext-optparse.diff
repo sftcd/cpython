@@ -1,0 +1,30 @@
+Description: Debian: Degrade optparse gracefully without gettext
+ python3.X-minimal includes optparse but not gettext. Use a fallback noop
+ gettext, if it can't be imported.
+
+Forwarded: not-needed
+
+--- a/Lib/optparse.py
++++ b/Lib/optparse.py
+@@ -72,7 +72,20 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBI
+ """
+ 
+ import sys, os
+-from gettext import gettext as _, ngettext
++try:
++    from gettext import gettext as _, ngettext
++except ImportError:
++    # Debian shims, only used by python3.X-minimal when the full stdlib is not
++    # installed
++    def gettext(message):
++        return message
++    _ = gettext  # avoid the definition above looking like a translated string
++    del gettext
++    def ngettext(singular,plural,n):
++        if n == 1:
++            return singular
++        else:
++            return plural
+ 
+ 
+ def _repr(self):
