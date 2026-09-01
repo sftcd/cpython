@@ -1,9 +1,15 @@
-Description: Disable ensurepip for the system installation
- We have a python3-pip package, for users who want pip.
- We just need ensurepip to seed pip in virtual environments.
+From 6b9ccb65b68d672e1cf90bd9400c0bf4683899cc Mon Sep 17 00:00:00 2001
+From: sftcd <stephen.farrell@cs.tcd.ie>
+Date: Tue, 1 Sep 2026 14:18:05 +0100
+Subject: [PATCH] Attempted fix for ensureip-disabled patch
 
-Forwarded: not-needed
+---
+ Lib/ensurepip/__init__.py | 33 +++++++++++++++++++++++++++++++++
+ Lib/venv/__init__.py      | 22 ++++++++++++++++++++--
+ 2 files changed, 53 insertions(+), 2 deletions(-)
 
+diff --git a/Lib/ensurepip/__init__.py b/Lib/ensurepip/__init__.py
+index bc2fb742cb9..62786e314de 100644
 --- a/Lib/ensurepip/__init__.py
 +++ b/Lib/ensurepip/__init__.py
 @@ -8,6 +8,34 @@
@@ -40,8 +46,8 @@ Forwarded: not-needed
 +
  
  __all__ = ["version", "bootstrap"]
- _PIP_VERSION = "26.2"
-@@ -140,6 +168,11 @@
+ _PIP_VERSION = "26.2.1"
+@@ -140,6 +168,11 @@ def _bootstrap(*, root=None, upgrade=False, user=False,
              "to install pip."
          ) from None
  
@@ -53,9 +59,11 @@ Forwarded: not-needed
      if altinstall and default_pip:
          raise ValueError("Cannot use altinstall and default_pip together")
  
+diff --git a/Lib/venv/__init__.py b/Lib/venv/__init__.py
+index 0653a43a8b1..31a43de381f 100644
 --- a/Lib/venv/__init__.py
 +++ b/Lib/venv/__init__.py
-@@ -451,8 +451,26 @@
+@@ -451,8 +451,26 @@ def _call_new_python(self, context, *py_args, **kwargs):
  
      def _setup_pip(self, context):
          """Installs or upgrades pip in a virtual environment"""
@@ -84,3 +92,6 @@ Forwarded: not-needed
  
      def setup_scripts(self, context):
          """
+-- 
+2.53.0
+
