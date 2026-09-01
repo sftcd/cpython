@@ -1,11 +1,19 @@
-Description: packaging (<< 24.1) doesn't recognise the +.
- We usually have git-updates that have the +
+From e73bdc8f944068bd0b2b94e8617b898447d29e80 Mon Sep 17 00:00:00 2001
+From: sftcd <stephen.farrell@cs.tcd.ie>
+Date: Tue, 1 Sep 2026 16:49:59 +0100
+Subject: [PATCH] packaging (<< 24.1) doesn't recognise the +.  We usually have
+ git-updates that have the +
 
-Bug-upstream: https://github.com/python/cpython/issues/99968
+---
+ Include/patchlevel.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Include/patchlevel.h b/Include/patchlevel.h
+index c20ccbdaf8b..36f2b618e52 100644
 --- a/Include/patchlevel.h
 +++ b/Include/patchlevel.h
-@@ -24,7 +24,7 @@
- #define PY_RELEASE_SERIAL       0
+@@ -27,7 +27,7 @@
+ #define PY_RELEASE_SERIAL       1
  
  /* Version as a string */
 -#define PY_VERSION              "3.15.0rc1+dev"
@@ -13,3 +21,6 @@ Bug-upstream: https://github.com/python/cpython/issues/99968
  /*--end constants--*/
  
  
+-- 
+2.53.0
+
