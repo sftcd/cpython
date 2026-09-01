@@ -25,7 +25,7 @@ jobs:
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt -U install -y --no-install-recommends sbuild mmdebstrap debian-archive-keyring ccache uidmap autopkgtest podman passt dbus-user-session
 
-          autopkgtest-build-podman --init=systemd --release testing -t debian-testing --post-command="apt install -y ca-certificates"
+          autopkgtest-build-podman --init=systemd --release testing -t debian-testing --post-command="apt install -y ca-certificates python3-sphinx"
 
           ccache --zero-stats --max-size=10.0G
           chmod a+X "$HOME" "$HOME/.cache"
