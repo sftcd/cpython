@@ -8,8 +8,8 @@ Bug-upstream: https://github.com/python/cpython/issues/99968
  #define PY_RELEASE_SERIAL       0
  
  /* Version as a string */
--#define PY_VERSION              "3.14.3+"
-+#define PY_VERSION              "3.14.3"
+-#define PY_VERSION              "3.15.0rc1+dev"
++#define PY_VERSION              "3.15.0rc1"
  /*--end constants--*/
  
  

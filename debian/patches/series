@@ -1,5 +1,5 @@
 #git-updates.diff
-#patchlevel-noplus.diff
+patchlevel-noplus.diff
 # DEfO ECH patch
 2026-08-ECH-in-ssl-module.patch
 deb-locations.diff
