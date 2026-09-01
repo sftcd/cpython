@@ -1630,18 +1630,6 @@ SOURCE_VER_FINAL = $(shell echo $(SOURCE_VER) | cut -d'~' -f1)
 SOURCE_VER_FN = $(subst ~,,$(SOURCE_VER))
 TAR_DIR := ./
 
-$(TAR_DIR)python$(VER)_$(SOURCE_VER).orig.tar.xz.sigstore:
-	wget https://www.python.org/ftp/python/$(SOURCE_VER_FINAL)/Python-$(SOURCE_VER_FN).tar.xz.sigstore -O $@
-
-verify-signature: $(TAR_DIR)python$(VER)_$(SOURCE_VER).orig.tar.xz.sigstore $(TAR_DIR)python$(VER)_$(SOURCE_VER).orig.tar.xz
-	sigstore verify identity \
-		--cert-identity hugo@python.org \
-		--cert-oidc-issuer https://github.com/login/oauth \
-		--bundle $(TAR_DIR)python$(VER)_$(SOURCE_VER).orig.tar.xz.sigstore \
-		$(TAR_DIR)python$(VER)_$(SOURCE_VER).orig.tar.xz
-.PHONY: verify-signature
-
-
 # Local Variables:
 # mode: makefile
 # end:
