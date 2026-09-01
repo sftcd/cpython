@@ -15,8 +15,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Aggressive cleanup
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/ccache
+          key: ccache
+	
+      - name: Prepare build environment
         run: |
+          # Aggressive cleanup
           # Remove Java (JDKs)
           sudo rm -rf /usr/lib/jvm
           # Remove .NET SDKs
@@ -39,18 +46,8 @@ jobs:
           sudo rm -rf /usr/local/share/powershell
           # Remove CodeQL and other toolcaches
           sudo rm -rf /opt/hostedtoolcache
-          docker system prune -af || true
-          docker builder prune -af || true
           df -h
-
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.cache/ccache
-          key: ccache
-	
-      - name: Prepare build environment
-        run: |
+          # back to the usual biz...
           sudo DEBIAN_FRONTEND=noninteractive apt -U install -y --no-install-recommends sbuild mmdebstrap debian-archive-keyring ccache uidmap autopkgtest podman passt dbus-user-session
 
           autopkgtest-build-podman --init=systemd --release testing -t debian-testing --post-command="apt install -y ca-certificates"
