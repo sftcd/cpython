@@ -1619,7 +1619,9 @@ update-patches: $(patchdir)/series
 	export QUILT_PATCHES=$(patchdir); \
 	while quilt push; do quilt refresh -pab --no-timestamps --no-index; done
 
-binary: binary-indep binary-arch
+# SF: try not do binary-indep
+# binary: binary-indep binary-arch
+binary: binary-arch
 
 .NOTPARALLEL:
 .PHONY: control-file configure build clean binary-indep binary-arch binary install
