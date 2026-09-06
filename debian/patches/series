@@ -28,5 +28,5 @@ man-page-fixes.diff
 #Add-Debian-specific-documentation-path-to-IDLE-menu.diff
 sphinx-no-fail-on-warning.diff
 glibc-termios.diff
-build-info-multiarch.patch
+# build-info-multiarch.patch
 pyexpat-test-depth.diff
