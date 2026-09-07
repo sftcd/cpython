@@ -7,7 +7,7 @@ distutils-install-layout.diff
 sysconfig-debian-schemes.diff
 link-opt.diff
 setup-modules.diff
-# profiled-build.diff
+profiled-build.diff
 langpack-gettext.diff
 disable-sem-check.diff
 #lto-link-flags.diff
@@ -23,10 +23,10 @@ min-multiprocessing-compileall.diff
 min-concurrent-compileall.diff
 min-ntpath-pathlib.diff
 makefile-bootstrap.diff
-#test-freeze-strip-libdir.diff
-#man-page-fixes.diff
-#Add-Debian-specific-documentation-path-to-IDLE-menu.diff
-#sphinx-no-fail-on-warning.diff
-#glibc-termios.diff
-# build-info-multiarch.patch
-#pyexpat-test-depth.diff
+test-freeze-strip-libdir.diff
+man-page-fixes.diff
+Add-Debian-specific-documentation-path-to-IDLE-menu.diff
+sphinx-no-fail-on-warning.diff
+glibc-termios.diff
+build-info-multiarch.patch
+pyexpat-test-depth.diff
