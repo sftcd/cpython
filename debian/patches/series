@@ -7,7 +7,7 @@ distutils-install-layout.diff
 sysconfig-debian-schemes.diff
 link-opt.diff
 setup-modules.diff
-profiled-build.diff
+# profiled-build.diff
 langpack-gettext.diff
 disable-sem-check.diff
 #lto-link-flags.diff
