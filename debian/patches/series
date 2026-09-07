@@ -25,7 +25,7 @@ min-ntpath-pathlib.diff
 makefile-bootstrap.diff
 test-freeze-strip-libdir.diff
 man-page-fixes.diff
-Add-Debian-specific-documentation-path-to-IDLE-menu.diff
+#Add-Debian-specific-documentation-path-to-IDLE-menu.diff
 sphinx-no-fail-on-warning.diff
 glibc-termios.diff
 build-info-multiarch.patch
